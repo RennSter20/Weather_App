@@ -6,7 +6,6 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.android.volley.Request
 import com.android.volley.toolbox.JsonObjectRequest
-import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import org.json.JSONObject
 
@@ -23,18 +22,28 @@ class MainActivity : AppCompatActivity() {
         val queue = Volley.newRequestQueue(this)
         val url = "https://api.openweathermap.org/data/2.5/weather?lat=43.73&lon=15.89&appid=a0c9131636ddbd513b2be78ca26b3a24"
 
-        var responseJSON:JSONObject? = null
 
         val jsonObjectRequest = JsonObjectRequest(
             Request.Method.GET, url, null,
-            { response -> Log.i("TAG", response.toString()) }
+            { response ->  Log.i("TAG", response.toString())
+
+                val reader = JSONObject(response.toString())
+
+                var coord: JSONObject = reader.getJSONObject("coord")
+                var lon:String = coord.getString("lon")
+
+                Log.i("LANGITUDE", lon)
+            }
         ) { error -> Log.i("TAG", error.toString()) }
 
 
 
         queue.add(jsonObjectRequest)
-
     }
+
+
+
+
 
 
 
