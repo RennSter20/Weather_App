@@ -50,48 +50,12 @@ class MainActivity : AppCompatActivity() {
 
         var selectedCity:String = ""
 
-        autocompleteFragment.setOnPlaceSelectedListener(object : PlaceSelectionListener {
-            override fun onPlaceSelected(place: Place) {
-
-                var geoCoder = Geocoder(applicationContext)
-
-                addressList = geoCoder.getFromLocationName(place.name, 1)
-                selectedCity = place.name
-
-            if(addressList!!.size > 0){
-                var firstCo:String = (addressList as MutableList<Address>?)!![0].latitude.toString()
-                var secondCo:String = (addressList as MutableList<Address>?)!![0].longitude.toString()
-
-                var stringBuilder:StringBuilder
-
-                firstCo = firstCo.substring(0, Math.min(firstCo.length, 5))
-                secondCo = secondCo.substring(0, Math.min(secondCo.length, 5))
-
-                urlCoordinates = "lat=" + firstCo + "&lon=" + secondCo
-            }else{
-                Toast.makeText(applicationContext, "No place found by the name " + place.name + ", please try another.", Toast.LENGTH_SHORT).show()
-                autocompleteFragment.setText("Enter a place")
-            }
-
-                urlComplete = urlOne + urlCoordinates + urlTwo
-
-            }
-
-            override fun onError(status: Status) {
-
-                Log.i(TAG, "An error occurred: $status")
-            }
-        })
-
-        val queue = Volley.newRequestQueue(this)
+        fun showInfo(){
+            val queue = Volley.newRequestQueue(this)
 
 
-        var cityObject:JSONObject? = null
-        var mainInfoObject:MainInfo? = null
-
-        var buttonFind: Button = findViewById(R.id.findButton)
-
-        buttonFind.setOnClickListener(){
+            var cityObject:JSONObject? = null
+            var mainInfoObject:MainInfo? = null
             val jsonObjectRequest = JsonObjectRequest(
                 Request.Method.GET, urlComplete, null,
                 { response ->  Log.i("TAG", response.toString())
@@ -112,9 +76,45 @@ class MainActivity : AppCompatActivity() {
                 }
             ) { error -> Log.i("TAG", error.toString()) }
             queue.add(jsonObjectRequest)
-
-
         }
+
+        autocompleteFragment.setOnPlaceSelectedListener(object : PlaceSelectionListener {
+            override fun onPlaceSelected(place: Place) {
+
+                var geoCoder = Geocoder(applicationContext)
+
+                addressList = geoCoder.getFromLocationName(place.name, 1)
+                selectedCity = place.name
+////
+            if(addressList!!.size > 0 ){
+                var firstCo:String = (addressList as MutableList<Address>?)!![0].latitude.toString()
+                var secondCo:String = (addressList as MutableList<Address>?)!![0].longitude.toString()
+
+                var stringBuilder:StringBuilder
+
+                firstCo = firstCo.substring(0, Math.min(firstCo.length, 5))
+                secondCo = secondCo.substring(0, Math.min(secondCo.length, 5))
+
+                urlCoordinates = "lat=" + firstCo + "&lon=" + secondCo
+            }else{
+                Toast.makeText(applicationContext, "No place found by the name " + place.name + ", please try another.", Toast.LENGTH_SHORT).show()
+                autocompleteFragment.setText("Enter a place")
+            }
+
+                urlComplete = urlOne + urlCoordinates + urlTwo
+                showInfo()
+            }
+
+            override fun onError(status: Status) {
+
+                Log.i(TAG, "An error occurred: $status")
+            }
+        })
+
+
+
+
+
 
     }
 
