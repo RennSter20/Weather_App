@@ -21,13 +21,13 @@ class City {
     var url:String? = null
 
     constructor(
-        cityName: String?,
+        cityName: String?,//
         cityLon: String?,
         cityLat: String?,
-        cityMainDescription: String?,
+        cityMainDescription: String?,//
         cityDescription: String?,
-        cityIcon: String?,
-        temperature: Long?,
+        cityIcon: String?,//
+        temperature: Long?,//
         feels_like: Long?,
         temp_min: Long?,
         temp_max: Long?,

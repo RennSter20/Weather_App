@@ -7,13 +7,17 @@ import android.location.Address
 import android.location.Geocoder
 import android.os.Bundle
 import android.util.Log
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.room.Room
 import com.android.volley.Request
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
+import com.example.weather_app.database.AppDatabase
+import com.example.weather_app.database.CityObject
 import com.example.weather_app.info.City
 import com.google.android.gms.common.api.Status
 import com.google.android.libraries.places.api.Places
@@ -21,12 +25,22 @@ import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
 import org.json.JSONObject
+import kotlin.random.Random
 
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        val db = Room.databaseBuilder(
+            applicationContext,
+            AppDatabase::class.java, "city_database"
+        ).allowMainThreadQueries().build()
+
+        val cityDao = db.cityDao()
+
+
 
 
         Places.initialize(applicationContext, "AIzaSyDcohma722quXf3lca57RsWk3OSj69Abns")
@@ -71,6 +85,13 @@ class MainActivity : AppCompatActivity() {
         //
 
 
+        var button: Button = findViewById(R.id.button)
+
+button.setOnClickListener(){
+    val cities: List<CityObject> = cityDao.getAll()
+    Log.i("CITIES", cities.toString())
+}
+
         fun setIcon(){
             var iconString:String = city!!.cityIcon.toString()
             var image:ImageView = findViewById(R.id.imageView)
@@ -80,6 +101,9 @@ class MainActivity : AppCompatActivity() {
             val resID: Int = res.getIdentifier(mDrawableName, "drawable", packageName)
             val drawable: Drawable = res.getDrawable(resID)
             image.setImageDrawable(drawable)
+
+
+
         }
 
         fun showInfo(){
@@ -114,6 +138,10 @@ class MainActivity : AppCompatActivity() {
                         tempUrl,
                     )
 
+
+
+
+
                     //TO DO CITY TEXT
                     cityText.text = city!!.cityName
                     currentTemperatureText.text = "Current temperature: " + city?.temperature.toString()
@@ -122,7 +150,8 @@ class MainActivity : AppCompatActivity() {
                     coordinatesText.text =   "Latitude: " + city!!.cityLat + " Longitude: " + city!!.cityLon
 
                     descriptionText.text = city!!.cityDescription
-
+                    cityDao.insertUsers(CityObject(Random.nextInt(), city!!.cityName, city!!.temperature, city!!.cityLon, city!!.cityLat))
+                    Log.i("CITY WITH NAME", cityDao.loadCityWithName("Zagreb").toString())
                     setIcon()
                 }
             ) { error -> Log.i("TAG", error.toString()) }
@@ -138,7 +167,6 @@ class MainActivity : AppCompatActivity() {
                 //returned search results
                 addressList = geoCoder.getFromLocationName(place.name, 1)
 
-                //TO DO --- get place.name
                 tempName = place.name.toString()
 
             if(addressList!!.size > 0 ){
@@ -154,17 +182,16 @@ class MainActivity : AppCompatActivity() {
                 tempLon = secondCo
 
 
-                //this is final
+                //this is final coordinates string
                 urlCoordinates = "lat=" + firstCo + "&lon=" + secondCo
                 urlComplete = urlOne + urlCoordinates + urlTwo
                 tempUrl = urlComplete
 
             }else{
                 Toast.makeText(applicationContext, "No place found by the name " + place.name + ", please try another.", Toast.LENGTH_LONG).show()
-
-                //TO DO --- fix search bar text after not finding a suitable place user wanted
                 autocompleteFragment.setText("Enter a place")
             }
+
                 showInfo()
             }
 

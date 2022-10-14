@@ -2,7 +2,7 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
-
+    id 'kotlin-kapt'
 }
 
 android {
@@ -43,7 +43,10 @@ android {
 }
 
 dependencies {
+
     implementation("androidx.room:room-runtime:2.4.3")
+    annotationProcessor("androidx.room:room-compiler:2.4.3")
+    kapt "androidx.room:room-compiler:2.4.3"
     implementation 'com.google.android.libraries.places:places:2.6.0'
     implementation 'com.google.android.gms:play-services-maps:18.1.0'
     implementation("com.android.volley:volley:1.2.1")

@@ -83,5 +83,18 @@
         app:layout_constraintVertical_bias="0.863"
         tools:srcCompat="@tools:sample/avatars" />
 
+    <Button
+        android:id="@+id/button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="224dp"
+        android:text="Button"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/autocomplete_fragment"
+        app:layout_constraintVertical_bias="0.971" />
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>
