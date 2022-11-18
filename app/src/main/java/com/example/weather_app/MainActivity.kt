@@ -22,6 +22,7 @@ import com.android.volley.Request
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
 import com.example.weather_app.info.City
+import com.example.weather_app.permission.PermissionManager
 import com.google.android.gms.common.api.Status
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
@@ -37,7 +38,7 @@ class MainActivity : AppCompatActivity() {
 
 
         Places.initialize(applicationContext, "AIzaSyDcohma722quXf3lca57RsWk3OSj69Abns")
-        val placesClient = Places.createClient(this)
+
         val autocompleteFragment =
             supportFragmentManager.findFragmentById(R.id.autocomplete_fragment)
                     as AutocompleteSupportFragment
@@ -63,39 +64,21 @@ class MainActivity : AppCompatActivity() {
         var tempName:String? = null
         var tempLon:String? = null
         var tempLat:String? = null
-
         var tempMainDesc:String
         var tempDesc:String
         var tempIcon:String
-
         var tempTemp:Long
         var tempFeelsLike:Long
         var tempMin:Long
         var tempMax:Long
         var tempWind:Long
-
         var tempUrl:String? = null
         //
 
+        var locationManager: LocationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
-        var currentLocation: Location? = null
-        var latitude:Double
-        var longitude:Double
 
-        lateinit var locationManager: LocationManager
-        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        val hasGps = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
         var button: Button = findViewById(R.id.button)
-
-        val gpsLocationListener: LocationListener = object : LocationListener {
-            override fun onLocationChanged(location: Location) {
-                currentLocation = location
-            }
-
-            override fun onStatusChanged(provider: String, status: Int, extras: Bundle) {}
-            override fun onProviderEnabled(provider: String) {}
-            override fun onProviderDisabled(provider: String) {}
-        }
 
         fun setIcon(){
             var iconString:String = city!!.cityIcon.toString()
@@ -127,8 +110,13 @@ class MainActivity : AppCompatActivity() {
                     var main: JSONObject = cityObject!!.getJSONObject("main")
                     var cityname:String = cityObject!!.getString("name")
 
+                    if(tempLon == null || tempLat == null){
+                        tempLon = com.example.weather_app.location.LocationManager.getLongitude(locationManager).toString()
+                        tempLat = com.example.weather_app.location.LocationManager.getLatitude(locationManager).toString()
+                    }
+
                     city = City(
-                        tempName,
+                        cityname,
                         tempLon,
                         tempLat,
                         cityObject!!.getJSONArray("weather").getJSONObject(0).getString("main"),
@@ -205,75 +193,16 @@ class MainActivity : AppCompatActivity() {
         })
 
         button.setOnClickListener(){
-            checkLocationPermission()
-            if (hasGps) {
-                locationManager.requestLocationUpdates(
-                    LocationManager.GPS_PROVIDER,
-                    5000,
-                    0F,
-                    gpsLocationListener
-                )
-            }
-
-            val lastKnownLocationByGps =
-                locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-            lastKnownLocationByGps?.let {
-                currentLocation = lastKnownLocationByGps
-                Log.i("TAG", currentLocation.toString())
-                latitude = currentLocation!!.latitude
-                longitude = currentLocation!!.longitude
-
-                urlCoordinates = "lat=" + latitude + "&lon=" + longitude
-                urlComplete = urlOne + urlCoordinates + urlTwo
-                tempUrl = urlComplete
-
-                showInfo()
-
-            }
+            PermissionManager.checkLocationPermission(this)
+            urlComplete = com.example.weather_app.location.LocationManager.getCurrentLocation(locationManager)
+            showInfo()
         }
 
 
 
     }
 
-    val MY_PERMISSIONS_REQUEST_LOCATION = 99
-    private fun checkLocationPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
 
-            // Should we show an explanation?
-            if (ActivityCompat.shouldShowRequestPermissionRationale(
-                    this,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                )
-            ) {
-
-                // Show an explanation to the user *asynchronously* -- don't block
-                // this thread waiting for the user's response! After the user
-                // sees the explanation, try again to request the permission.
-                AlertDialog.Builder(this)
-                    .setTitle("Location Permission Needed")
-                    .setMessage("This app needs the Location permission, please accept to use location functionality")
-                    .setPositiveButton("OK",
-                        DialogInterface.OnClickListener { dialogInterface, i -> //Prompt the user once explanation has been shown
-                            ActivityCompat.requestPermissions(
-                                this,
-                                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                                MY_PERMISSIONS_REQUEST_LOCATION
-                            )
-                        })
-                    .create()
-                    .show()
-            } else {
-                // No explanation needed, we can request the permission.
-                ActivityCompat.requestPermissions(
-                    this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                    MY_PERMISSIONS_REQUEST_LOCATION
-                )
-            }
-        }
-    }
 
 
 
