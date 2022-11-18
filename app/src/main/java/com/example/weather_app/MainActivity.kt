@@ -1,10 +1,14 @@
 package com.example.weather_app
 
+import android.Manifest
+import android.app.AlertDialog
 import android.content.ContentValues.TAG
+import android.content.Context
+import android.content.DialogInterface
+import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.graphics.drawable.Drawable
-import android.location.Address
-import android.location.Geocoder
+import android.location.*
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
@@ -12,12 +16,11 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.room.Room
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.android.volley.Request
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
-import com.example.weather_app.database.AppDatabase
-import com.example.weather_app.database.CityObject
 import com.example.weather_app.info.City
 import com.google.android.gms.common.api.Status
 import com.google.android.libraries.places.api.Places
@@ -25,22 +28,12 @@ import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
 import org.json.JSONObject
-import kotlin.random.Random
 
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        val db = Room.databaseBuilder(
-            applicationContext,
-            AppDatabase::class.java, "city_database"
-        ).allowMainThreadQueries().build()
-
-        val cityDao = db.cityDao()
-
-
 
 
         Places.initialize(applicationContext, "AIzaSyDcohma722quXf3lca57RsWk3OSj69Abns")
@@ -85,12 +78,24 @@ class MainActivity : AppCompatActivity() {
         //
 
 
+        var currentLocation: Location? = null
+        var latitude:Double
+        var longitude:Double
+
+        lateinit var locationManager: LocationManager
+        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val hasGps = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
         var button: Button = findViewById(R.id.button)
 
-button.setOnClickListener(){
-    val cities: List<CityObject> = cityDao.getAll()
-    Log.i("CITIES", cities.toString())
-}
+        val gpsLocationListener: LocationListener = object : LocationListener {
+            override fun onLocationChanged(location: Location) {
+                currentLocation = location
+            }
+
+            override fun onStatusChanged(provider: String, status: Int, extras: Bundle) {}
+            override fun onProviderEnabled(provider: String) {}
+            override fun onProviderDisabled(provider: String) {}
+        }
 
         fun setIcon(){
             var iconString:String = city!!.cityIcon.toString()
@@ -150,8 +155,6 @@ button.setOnClickListener(){
                     coordinatesText.text =   "Latitude: " + city!!.cityLat + " Longitude: " + city!!.cityLon
 
                     descriptionText.text = city!!.cityDescription
-                    cityDao.insertUsers(CityObject(Random.nextInt(), city!!.cityName, city!!.temperature, city!!.cityLon, city!!.cityLat))
-                    Log.i("CITY WITH NAME", cityDao.loadCityWithName("Zagreb").toString())
                     setIcon()
                 }
             ) { error -> Log.i("TAG", error.toString()) }
@@ -169,28 +172,28 @@ button.setOnClickListener(){
 
                 tempName = place.name.toString()
 
-            if(addressList!!.size > 0 ){
-                var firstCo:String = (addressList as MutableList<Address>?)!![0].latitude.toString()
-                var secondCo:String = (addressList as MutableList<Address>?)!![0].longitude.toString()
+                if(addressList!!.size > 0 ){
+                    var firstCo:String = (addressList as MutableList<Address>?)!![0].latitude.toString()
+                    var secondCo:String = (addressList as MutableList<Address>?)!![0].longitude.toString()
 
 
-                //coordinates have too much decimals, this step removes extra decimals
-                var stringBuilder:StringBuilder
-                firstCo = firstCo.substring(0, Math.min(firstCo.length, 5))
-                secondCo = secondCo.substring(0, Math.min(secondCo.length, 5))
-                tempLat = firstCo
-                tempLon = secondCo
+                    //coordinates have too much decimals, this step removes extra decimals
+                    var stringBuilder:StringBuilder
+                    firstCo = firstCo.substring(0, Math.min(firstCo.length, 5))
+                    secondCo = secondCo.substring(0, Math.min(secondCo.length, 5))
+                    tempLat = firstCo
+                    tempLon = secondCo
 
 
-                //this is final coordinates string
-                urlCoordinates = "lat=" + firstCo + "&lon=" + secondCo
-                urlComplete = urlOne + urlCoordinates + urlTwo
-                tempUrl = urlComplete
+                    //this is final coordinates string
+                    urlCoordinates = "lat=" + firstCo + "&lon=" + secondCo
+                    urlComplete = urlOne + urlCoordinates + urlTwo
+                    tempUrl = urlComplete
 
-            }else{
-                Toast.makeText(applicationContext, "No place found by the name " + place.name + ", please try another.", Toast.LENGTH_LONG).show()
-                autocompleteFragment.setText("Enter a place")
-            }
+                }else{
+                    Toast.makeText(applicationContext, "No place found by the name " + place.name + ", please try another.", Toast.LENGTH_LONG).show()
+                    autocompleteFragment.setText("Enter a place")
+                }
 
                 showInfo()
             }
@@ -201,14 +204,76 @@ button.setOnClickListener(){
             }
         })
 
+        button.setOnClickListener(){
+            checkLocationPermission()
+            if (hasGps) {
+                locationManager.requestLocationUpdates(
+                    LocationManager.GPS_PROVIDER,
+                    5000,
+                    0F,
+                    gpsLocationListener
+                )
+            }
 
+            val lastKnownLocationByGps =
+                locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+            lastKnownLocationByGps?.let {
+                currentLocation = lastKnownLocationByGps
+                Log.i("TAG", currentLocation.toString())
+                latitude = currentLocation!!.latitude
+                longitude = currentLocation!!.longitude
 
+                urlCoordinates = "lat=" + latitude + "&lon=" + longitude
+                urlComplete = urlOne + urlCoordinates + urlTwo
+                tempUrl = urlComplete
+
+                showInfo()
+
+            }
+        }
 
 
 
     }
 
+    val MY_PERMISSIONS_REQUEST_LOCATION = 99
+    private fun checkLocationPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
 
+            // Should we show an explanation?
+            if (ActivityCompat.shouldShowRequestPermissionRationale(
+                    this,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                )
+            ) {
+
+                // Show an explanation to the user *asynchronously* -- don't block
+                // this thread waiting for the user's response! After the user
+                // sees the explanation, try again to request the permission.
+                AlertDialog.Builder(this)
+                    .setTitle("Location Permission Needed")
+                    .setMessage("This app needs the Location permission, please accept to use location functionality")
+                    .setPositiveButton("OK",
+                        DialogInterface.OnClickListener { dialogInterface, i -> //Prompt the user once explanation has been shown
+                            ActivityCompat.requestPermissions(
+                                this,
+                                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                                MY_PERMISSIONS_REQUEST_LOCATION
+                            )
+                        })
+                    .create()
+                    .show()
+            } else {
+                // No explanation needed, we can request the permission.
+                ActivityCompat.requestPermissions(
+                    this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                    MY_PERMISSIONS_REQUEST_LOCATION
+                )
+            }
+        }
+    }
 
 
 
