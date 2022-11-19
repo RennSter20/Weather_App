@@ -12,9 +12,12 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.room.Room
 import com.android.volley.Request
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
+import com.example.weather_app.database.AppDatabase
+import com.example.weather_app.database.CityModel
 import com.example.weather_app.info.City
 import com.example.weather_app.location.LocationMngr
 import com.example.weather_app.permission.PermissionManager
@@ -30,6 +33,11 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        val db = Room.databaseBuilder(
+            applicationContext,
+            AppDatabase::class.java, "CityModel"
+        ).allowMainThreadQueries().build()
 
 
         Places.initialize(applicationContext, "AIzaSyDcohma722quXf3lca57RsWk3OSj69Abns")
@@ -191,6 +199,25 @@ class MainActivity : AppCompatActivity() {
             PermissionManager.checkLocationPermission(this)
             urlComplete = LocationMngr.getCurrentLocation(locationManager)
             showInfo()
+
+
+            val userDao = db.cityModelDao()
+            val users: List<CityModel>? = userDao.getAll()
+
+            if(users?.size == 0){
+                var testModel = CityModel(0, city?.cityName.toString(), city?.temperature)
+
+                if (testModel != null) {
+                    userDao.insertAll(testModel)
+                }
+
+                val users: List<CityModel>? = userDao.getAll()
+            }else{
+                userDao.
+            }
+
+            var int = 0
+            int++
         }
 
 
