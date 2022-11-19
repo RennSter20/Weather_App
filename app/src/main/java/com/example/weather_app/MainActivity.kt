@@ -1,11 +1,7 @@
 package com.example.weather_app
 
-import android.Manifest
-import android.app.AlertDialog
 import android.content.ContentValues.TAG
 import android.content.Context
-import android.content.DialogInterface
-import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.graphics.drawable.Drawable
 import android.location.*
@@ -16,12 +12,11 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import com.android.volley.Request
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
 import com.example.weather_app.info.City
+import com.example.weather_app.location.LocationMngr
 import com.example.weather_app.permission.PermissionManager
 import com.google.android.gms.common.api.Status
 import com.google.android.libraries.places.api.Places
@@ -111,8 +106,8 @@ class MainActivity : AppCompatActivity() {
                     var cityname:String = cityObject!!.getString("name")
 
                     if(tempLon == null || tempLat == null){
-                        tempLon = com.example.weather_app.location.LocationManager.getLongitude(locationManager).toString()
-                        tempLat = com.example.weather_app.location.LocationManager.getLatitude(locationManager).toString()
+                        tempLon = LocationMngr.getLongitude(locationManager).toString()
+                        tempLat = LocationMngr.getLatitude(locationManager).toString()
                     }
 
                     city = City(
@@ -194,7 +189,7 @@ class MainActivity : AppCompatActivity() {
 
         button.setOnClickListener(){
             PermissionManager.checkLocationPermission(this)
-            urlComplete = com.example.weather_app.location.LocationManager.getCurrentLocation(locationManager)
+            urlComplete = LocationMngr.getCurrentLocation(locationManager)
             showInfo()
         }
 

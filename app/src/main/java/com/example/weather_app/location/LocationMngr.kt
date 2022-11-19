@@ -6,7 +6,7 @@ import android.location.Location
 import android.location.LocationManager
 import androidx.core.content.ContextCompat.getSystemService
 
-class LocationManager {
+class LocationMngr {
 
 
 
