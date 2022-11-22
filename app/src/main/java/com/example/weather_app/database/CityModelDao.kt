@@ -14,9 +14,6 @@ interface CityModelDao {
     @Insert
     fun insertAll(vararg cities: CityModel)
 
-    @Delete
-    fun delete(city: CityModel)
-
 
 
 }

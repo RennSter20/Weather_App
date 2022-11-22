@@ -1,10 +1,14 @@
 package com.example.weather_app
 
+//import com.android.volley.Response
+
 import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.res.Resources
 import android.graphics.drawable.Drawable
-import android.location.*
+import android.location.Address
+import android.location.Geocoder
+import android.location.LocationManager
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
@@ -13,20 +17,22 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.room.Room
-import com.android.volley.Request
-import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
 import com.example.weather_app.database.AppDatabase
 import com.example.weather_app.database.CityModel
 import com.example.weather_app.info.City
+import com.example.weather_app.info.Example
 import com.example.weather_app.location.LocationMngr
 import com.example.weather_app.permission.PermissionManager
+import com.example.weather_app.retrofit.ApiClient
+import com.example.weather_app.retrofit.ApiInterface
 import com.google.android.gms.common.api.Status
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
 import org.json.JSONObject
+import retrofit2.Call
 
 
 class MainActivity : AppCompatActivity() {
@@ -56,12 +62,10 @@ class MainActivity : AppCompatActivity() {
         var cityText:TextView = findViewById(R.id.cityText)
         var currentTemperatureText:TextView = findViewById(R.id.currentTemperature)
         var descriptionText:TextView = findViewById(R.id.weatherDescription)
-        var coordinatesText:TextView = findViewById(R.id.coordinatesText)
 
-        var urlOne = "https://api.openweathermap.org/data/2.5/weather?"
+        var urlOne = "https://api.openweathermap.org/data/2.5/"
+        //var urlExtOne = "weather?"
         var urlTwo = "&units=metric&lang=en&appid=a0c9131636ddbd513b2be78ca26b3a24"
-        var urlCoordinates:String = ""
-        var urlComplete:String = ""
 
         //TEMPORARY CITY OBJECT VALUES
         var tempName:String? = null
@@ -104,6 +108,7 @@ class MainActivity : AppCompatActivity() {
             var cityObject:JSONObject? = null
 
 
+/*
             val jsonObjectRequest = JsonObjectRequest(
                 Request.Method.GET, urlComplete, null,
                 { response ->
@@ -134,10 +139,6 @@ class MainActivity : AppCompatActivity() {
                         tempUrl,
                     )
 
-
-
-
-
                     //TO DO CITY TEXT
                     cityText.text = city!!.cityName
                     currentTemperatureText.text = "Current temperature: " + city?.temperature.toString()
@@ -149,8 +150,9 @@ class MainActivity : AppCompatActivity() {
                     setIcon()
                 }
             ) { error -> Log.i("TAG", error.toString()) }
-
             queue.add(jsonObjectRequest)
+*/
+
         }
 
         autocompleteFragment.setOnPlaceSelectedListener(object : PlaceSelectionListener {
@@ -162,24 +164,8 @@ class MainActivity : AppCompatActivity() {
                 addressList = geoCoder.getFromLocationName(place.name, 1)
 
                 tempName = place.name.toString()
-
+                var listOfParams = listOf<String>()
                 if(addressList!!.size > 0 ){
-                    var firstCo:String = (addressList as MutableList<Address>?)!![0].latitude.toString()
-                    var secondCo:String = (addressList as MutableList<Address>?)!![0].longitude.toString()
-
-
-                    //coordinates have too much decimals, this step removes extra decimals
-                    var stringBuilder:StringBuilder
-                    firstCo = firstCo.substring(0, Math.min(firstCo.length, 5))
-                    secondCo = secondCo.substring(0, Math.min(secondCo.length, 5))
-                    tempLat = firstCo
-                    tempLon = secondCo
-
-
-                    //this is final coordinates string
-                    urlCoordinates = "lat=" + firstCo + "&lon=" + secondCo
-                    urlComplete = urlOne + urlCoordinates + urlTwo
-                    tempUrl = urlComplete
 
                 }else{
                     Toast.makeText(applicationContext, "No place found by the name " + place.name + ", please try another.", Toast.LENGTH_LONG).show()
@@ -197,27 +183,27 @@ class MainActivity : AppCompatActivity() {
 
         button.setOnClickListener(){
             PermissionManager.checkLocationPermission(this)
-            urlComplete = LocationMngr.getCurrentLocation(locationManager)
+            var listOfParams = LocationMngr.getCurrentLocation(locationManager)
+
             showInfo()
 
 
             val userDao = db.cityModelDao()
-            val users: List<CityModel>? = userDao.getAll()
+            var users: List<CityModel>? = userDao.getAll()
 
-            if(users?.size == 0){
-                var testModel = CityModel(0, city?.cityName.toString(), city?.temperature)
+            var testModel = CityModel(0, city?.cityName.toString(), city?.temperature)
+            Log.i("TEST", "${testModel.city_name} ${testModel.temperature}")
 
-                if (testModel != null) {
-                    userDao.insertAll(testModel)
-                }
-
-                val users: List<CityModel>? = userDao.getAll()
-            }else{
-                userDao.
+            if (testModel != null) {
+                userDao.insertAll(testModel)
             }
+
+            users = userDao.getAll()
+
 
             var int = 0
             int++
+
         }
 
 

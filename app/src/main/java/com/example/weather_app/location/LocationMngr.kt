@@ -12,12 +12,13 @@ class LocationMngr {
 
     companion object{
         @SuppressLint("MissingPermission")
-        fun getCurrentLocation(locationManager: LocationManager):String{
+        fun getCurrentLocation(locationManager: LocationManager):List<String>{
 
             val lastKnownLocationByGps = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
             var location: Location? = null
 
             var urlCoordinates:String? = null
+            var stringArray = mutableListOf<String>()
 
             lastKnownLocationByGps?.let {
                 location = lastKnownLocationByGps
@@ -30,9 +31,13 @@ class LocationMngr {
 
                 urlCoordinates = urlOne + "lat=" + latitude + "&lon=" + longitude + urlTwo
 
+
+                stringArray += latitude.toString()
+                stringArray += longitude.toString()
+
             }
 
-            return urlCoordinates!!
+            return stringArray
 
         }
 
