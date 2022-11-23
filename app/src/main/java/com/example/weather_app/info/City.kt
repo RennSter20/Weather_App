@@ -12,13 +12,10 @@ class City {
     var cityDescription:String? = null
     var cityIcon:String? = null
 
-    var temperature:Long? = null
-    var feels_like:Long? = null
-    var temp_min:Long? = null
-    var temp_max:Long? = null
-    var wind_speed:Long? = null
-
-    var url:String? = null
+    var temperature:String? = null
+    var feels_like:String? = null
+    var temp_min:String? = null
+    var temp_max:String? = null
 
     constructor(
         cityName: String?,//
@@ -27,12 +24,10 @@ class City {
         cityMainDescription: String?,//
         cityDescription: String?,
         cityIcon: String?,//
-        temperature: Long?,//
-        feels_like: Long?,
-        temp_min: Long?,
-        temp_max: Long?,
-        wind_speed: Long?,
-        url: String?
+        temperature: String?,//
+        feels_like: String?,
+        temp_min: String?,
+        temp_max: String?,
     ) {
         this.cityName = cityName
         this.cityLon = cityLon
@@ -44,8 +39,6 @@ class City {
         this.feels_like = feels_like
         this.temp_min = temp_min
         this.temp_max = temp_max
-        this.wind_speed = wind_speed
-        this.url = url
     }
 
 

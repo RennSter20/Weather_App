@@ -17,15 +17,13 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.room.Room
-import com.android.volley.toolbox.Volley
 import com.example.weather_app.database.AppDatabase
 import com.example.weather_app.database.CityModel
 import com.example.weather_app.info.City
-import com.example.weather_app.info.Example
 import com.example.weather_app.location.LocationMngr
 import com.example.weather_app.permission.PermissionManager
-import com.example.weather_app.retrofit.ApiClient
 import com.example.weather_app.retrofit.ApiInterface
+import com.example.weather_app.retrofit.ObjectFiller
 import com.google.android.gms.common.api.Status
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
@@ -33,6 +31,10 @@ import com.google.android.libraries.places.widget.AutocompleteSupportFragment
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
 import org.json.JSONObject
 import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 
 class MainActivity : AppCompatActivity() {
@@ -64,8 +66,7 @@ class MainActivity : AppCompatActivity() {
         var descriptionText:TextView = findViewById(R.id.weatherDescription)
 
         var urlOne = "https://api.openweathermap.org/data/2.5/"
-        //var urlExtOne = "weather?"
-        var urlTwo = "&units=metric&lang=en&appid=a0c9131636ddbd513b2be78ca26b3a24"
+        var urlTwo = "&units=metric&lang=en&appid=e823ed3a89e6e68ab2ff121613a7cf70"
 
         //TEMPORARY CITY OBJECT VALUES
         var tempName:String? = null
@@ -73,8 +74,8 @@ class MainActivity : AppCompatActivity() {
         var tempLat:String? = null
         var tempMainDesc:String
         var tempDesc:String
-        var tempIcon:String
-        var tempTemp:Long
+        var tempIcon:String? = null
+        var tempTemp:String? = null
         var tempFeelsLike:Long
         var tempMin:Long
         var tempMax:Long
@@ -96,63 +97,32 @@ class MainActivity : AppCompatActivity() {
             val resID: Int = res.getIdentifier(mDrawableName, "drawable", packageName)
             val drawable: Drawable = res.getDrawable(resID)
             image.setImageDrawable(drawable)
-
-
-
         }
 
-        fun showInfo(){
-            val queue = Volley.newRequestQueue(this)
+        var retrofit: Retrofit? = null
+        fun getClient(): Retrofit? { //creating object
+            if (retrofit == null) {
+                retrofit =
+                    Retrofit.Builder() //Retrofit.Builder class uses the Builder API to allow defining the URL end point for the HTTP operations and finally build a new Retrofit instance.
+                        //http://api.openweathermap.org/data/2.5/weather?q=London&APPID=76a35a17f3e1bce771a09f3555b614a8
+                        .baseUrl("https://api.openweathermap.org/data/2.5/")
+                        .addConverterFactory(GsonConverterFactory.create())
+                        .build()
+            }
+            return retrofit
+        }
+        fun getInfo(){
+            var apiInterface:ApiInterface = getClient()!!.create(ApiInterface::class.java)
+            var call: Call<Any?> = apiInterface.getWeatherData(tempName)
+            call?.enqueue(object : Callback<Any?> {
 
-            //response
-            var cityObject:JSONObject? = null
-
-
-/*
-            val jsonObjectRequest = JsonObjectRequest(
-                Request.Method.GET, urlComplete, null,
-                { response ->
-
-                    cityObject = JSONObject(response.toString())
-
-                    var main: JSONObject = cityObject!!.getJSONObject("main")
-                    var cityname:String = cityObject!!.getString("name")
-
-                    if(tempLon == null || tempLat == null){
-                        tempLon = LocationMngr.getLongitude(locationManager).toString()
-                        tempLat = LocationMngr.getLatitude(locationManager).toString()
-                    }
-
-                    city = City(
-                        cityname,
-                        tempLon,
-                        tempLat,
-                        cityObject!!.getJSONArray("weather").getJSONObject(0).getString("main"),
-                        cityObject!!.getJSONArray("weather").getJSONObject(0)
-                            .getString("description"),
-                        cityObject!!.getJSONArray("weather").getJSONObject(0).getString("icon"),
-                        cityObject!!.getJSONObject("main").getLong("temp"),
-                        cityObject!!.getJSONObject("main").getLong("feels_like"),
-                        cityObject!!.getJSONObject("main").getLong("temp_min"),
-                        cityObject!!.getJSONObject("main").getLong("temp_max"),
-                        cityObject!!.getJSONObject("wind").getLong("speed"),
-                        tempUrl,
-                    )
-
-                    //TO DO CITY TEXT
-                    cityText.text = city!!.cityName
-                    currentTemperatureText.text = "Current temperature: " + city?.temperature.toString()
-
-                    //TESTING IF COORDINATES ARE SHOWN
-                    coordinatesText.text =   "Latitude: " + city!!.cityLat + " Longitude: " + city!!.cityLon
-
-                    descriptionText.text = city!!.cityDescription
-                    setIcon()
+                override fun onFailure(call: Call<Any?>, t: Throwable?) {}
+                override fun onResponse(call: Call<Any?>, response: Response<Any?>) {
+                    var json:JSONObject = response.body()
+                    var objFiller:ObjectFiller? = null
+                    city = objFiller?.createCityObject(json)
                 }
-            ) { error -> Log.i("TAG", error.toString()) }
-            queue.add(jsonObjectRequest)
-*/
-
+            })
         }
 
         autocompleteFragment.setOnPlaceSelectedListener(object : PlaceSelectionListener {
@@ -164,15 +134,18 @@ class MainActivity : AppCompatActivity() {
                 addressList = geoCoder.getFromLocationName(place.name, 1)
 
                 tempName = place.name.toString()
-                var listOfParams = listOf<String>()
-                if(addressList!!.size > 0 ){
-
-                }else{
-                    Toast.makeText(applicationContext, "No place found by the name " + place.name + ", please try another.", Toast.LENGTH_LONG).show()
+                if(addressList!!.size == 0 ) {
+                    Toast.makeText(
+                        applicationContext,
+                        "No place found by the name " + place.name + ", please try another.",
+                        Toast.LENGTH_LONG
+                    ).show()
                     autocompleteFragment.setText("Enter a place")
                 }
 
-                showInfo()
+                getInfo()
+
+
             }
 
             override fun onError(status: Status) {
@@ -185,25 +158,11 @@ class MainActivity : AppCompatActivity() {
             PermissionManager.checkLocationPermission(this)
             var listOfParams = LocationMngr.getCurrentLocation(locationManager)
 
-            showInfo()
+            getInfo()
 
-
-            val userDao = db.cityModelDao()
-            var users: List<CityModel>? = userDao.getAll()
-
-            var testModel = CityModel(0, city?.cityName.toString(), city?.temperature)
-            Log.i("TEST", "${testModel.city_name} ${testModel.temperature}")
-
-            if (testModel != null) {
-                userDao.insertAll(testModel)
-            }
-
-            users = userDao.getAll()
-
-
-            var int = 0
-            int++
-
+            cityText.text = city?.cityName
+            currentTemperatureText.text = city?.temperature
+            descriptionText.text = city?.cityMainDescription
         }
 
 
