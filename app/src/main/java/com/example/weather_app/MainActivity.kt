@@ -18,17 +18,17 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.room.Room
 import com.example.weather_app.database.AppDatabase
-import com.example.weather_app.database.CityModel
 import com.example.weather_app.info.City
 import com.example.weather_app.location.LocationMngr
 import com.example.weather_app.permission.PermissionManager
 import com.example.weather_app.retrofit.ApiInterface
-import com.example.weather_app.retrofit.ObjectFiller
+import com.example.weather_app.retrofit.ObjectMaker
 import com.google.android.gms.common.api.Status
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
+import com.google.gson.Gson
 import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
@@ -85,7 +85,6 @@ class MainActivity : AppCompatActivity() {
 
         var locationManager: LocationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
-
         var button: Button = findViewById(R.id.button)
 
         fun setIcon(){
@@ -98,32 +97,44 @@ class MainActivity : AppCompatActivity() {
             val drawable: Drawable = res.getDrawable(resID)
             image.setImageDrawable(drawable)
         }
+        val retrofit:Retrofit = Retrofit.Builder() //Retrofit.Builder class uses the Builder API to allow defining the URL end point for the HTTP operations and finally build a new Retrofit instance.
+            //http://api.openweathermap.org/data/2.5/weather?q=London&APPID=76a35a17f3e1bce771a09f3555b614a8
+            .baseUrl("https://api.openweathermap.org/data/2.5/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
 
-        var retrofit: Retrofit? = null
-        fun getClient(): Retrofit? { //creating object
-            if (retrofit == null) {
-                retrofit =
-                    Retrofit.Builder() //Retrofit.Builder class uses the Builder API to allow defining the URL end point for the HTTP operations and finally build a new Retrofit instance.
-                        //http://api.openweathermap.org/data/2.5/weather?q=London&APPID=76a35a17f3e1bce771a09f3555b614a8
-                        .baseUrl("https://api.openweathermap.org/data/2.5/")
-                        .addConverterFactory(GsonConverterFactory.create())
-                        .build()
-            }
-            return retrofit
-        }
-        fun getInfo(){
-            var apiInterface:ApiInterface = getClient()!!.create(ApiInterface::class.java)
-            var call: Call<Any?> = apiInterface.getWeatherData(tempName)
-            call?.enqueue(object : Callback<Any?> {
+        fun getCity(cityName:String): City? {
+            var apiInterface:ApiInterface = retrofit.create(ApiInterface::class.java)
+            var call: Call<Object> = apiInterface.getWeatherData(cityName)
 
-                override fun onFailure(call: Call<Any?>, t: Throwable?) {}
-                override fun onResponse(call: Call<Any?>, response: Response<Any?>) {
-                    var json:JSONObject = response.body()
-                    var objFiller:ObjectFiller? = null
-                    city = objFiller?.createCityObject(json)
+            var cityToReturn:City? = null
+
+            call?.enqueue(object : Callback<Object> {
+                override fun onResponse(call: Call<Object>?, response: Response<Object>) {
+                    Log.i("TAG", Gson().toJson(response.body()))
+
+                    val jsonObject: JSONObject = JSONObject(Gson().toJson(response.body()))
+                    city = ObjectMaker().makeObject(jsonObject)
+
+                    if(city != null){
+                        Log.i("CITY NAME", city!!.cityName.toString())
+                        cityText.text = city!!.cityName
+                        currentTemperatureText.text = city!!.temperature
+                        descriptionText.text = city!!.cityMainDescription
+                        setIcon()
+                    }
+
                 }
-            })
+
+                override fun onFailure(call: Call<Object>?, t: Throwable?) {
+                    Log.e("TAG", "onFailure: "+ t.toString() )
+                }})
+            return cityToReturn
+
         }
+
+
+
 
         autocompleteFragment.setOnPlaceSelectedListener(object : PlaceSelectionListener {
             override fun onPlaceSelected(place: Place) {
@@ -143,8 +154,8 @@ class MainActivity : AppCompatActivity() {
                     autocompleteFragment.setText("Enter a place")
                 }
 
-                getInfo()
-
+                city = getCity(tempName!!)
+                var boo:Boolean = true
 
             }
 
@@ -158,11 +169,7 @@ class MainActivity : AppCompatActivity() {
             PermissionManager.checkLocationPermission(this)
             var listOfParams = LocationMngr.getCurrentLocation(locationManager)
 
-            getInfo()
-
-            cityText.text = city?.cityName
-            currentTemperatureText.text = city?.temperature
-            descriptionText.text = city?.cityMainDescription
+            city = getCity(tempName!!)
         }
 
 
