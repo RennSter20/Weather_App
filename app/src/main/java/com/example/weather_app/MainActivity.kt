@@ -23,6 +23,7 @@ import com.example.weather_app.location.LocationMngr
 import com.example.weather_app.permission.PermissionManager
 import com.example.weather_app.retrofit.ApiInterface
 import com.example.weather_app.retrofit.ObjectMaker
+import com.example.weather_app.retrofit.RetrofitManager
 import com.google.android.gms.common.api.Status
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
@@ -87,52 +88,6 @@ class MainActivity : AppCompatActivity() {
 
         var button: Button = findViewById(R.id.button)
 
-        fun setIcon(){
-            var iconString:String = city!!.cityIcon.toString()
-            var image:ImageView = findViewById(R.id.imageView)
-
-            val res: Resources = resources
-            val mDrawableName = "_" + iconString.substring(1)
-            val resID: Int = res.getIdentifier(mDrawableName, "drawable", packageName)
-            val drawable: Drawable = res.getDrawable(resID)
-            image.setImageDrawable(drawable)
-        }
-        val retrofit:Retrofit = Retrofit.Builder() //Retrofit.Builder class uses the Builder API to allow defining the URL end point for the HTTP operations and finally build a new Retrofit instance.
-            //http://api.openweathermap.org/data/2.5/weather?q=London&APPID=76a35a17f3e1bce771a09f3555b614a8
-            .baseUrl("https://api.openweathermap.org/data/2.5/")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-
-        fun getCity(cityName:String): City? {
-            var apiInterface:ApiInterface = retrofit.create(ApiInterface::class.java)
-            var call: Call<Object> = apiInterface.getWeatherData(cityName)
-
-            var cityToReturn:City? = null
-
-            call?.enqueue(object : Callback<Object> {
-                override fun onResponse(call: Call<Object>?, response: Response<Object>) {
-                    Log.i("TAG", Gson().toJson(response.body()))
-
-                    val jsonObject: JSONObject = JSONObject(Gson().toJson(response.body()))
-                    city = ObjectMaker().makeObject(jsonObject)
-
-                    if(city != null){
-                        Log.i("CITY NAME", city!!.cityName.toString())
-                        cityText.text = city!!.cityName
-                        currentTemperatureText.text = city!!.temperature
-                        descriptionText.text = city!!.cityMainDescription
-                        setIcon()
-                    }
-
-                }
-
-                override fun onFailure(call: Call<Object>?, t: Throwable?) {
-                    Log.e("TAG", "onFailure: "+ t.toString() )
-                }})
-            return cityToReturn
-
-        }
-
 
 
 
@@ -154,8 +109,7 @@ class MainActivity : AppCompatActivity() {
                     autocompleteFragment.setText("Enter a place")
                 }
 
-                city = getCity(tempName!!)
-                var boo:Boolean = true
+                city = RetrofitManager().getCity(tempName!!, cityText, currentTemperatureText, descriptionText, applicationContext)
 
             }
 
@@ -169,7 +123,7 @@ class MainActivity : AppCompatActivity() {
             PermissionManager.checkLocationPermission(this)
             var listOfParams = LocationMngr.getCurrentLocation(locationManager)
 
-            city = getCity(tempName!!)
+            city = RetrofitManager().getCityWithCo(listOfParams.get(0),listOfParams.get(1), cityText, currentTemperatureText, descriptionText)
         }
 
 

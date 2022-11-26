@@ -15,9 +15,7 @@ class LocationMngr {
         fun getCurrentLocation(locationManager: LocationManager):List<String>{
 
             val lastKnownLocationByGps = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-            var location: Location? = null
-
-            var urlCoordinates:String? = null
+            var location: Location?
             var stringArray = mutableListOf<String>()
 
             lastKnownLocationByGps?.let {
@@ -25,12 +23,6 @@ class LocationMngr {
 
                 var latitude:Double = location!!.latitude
                 var longitude:Double = location!!.longitude
-
-                var urlOne = "https://api.openweathermap.org/data/2.5/weather?"
-                var urlTwo = "&units=metric&lang=en&appid=a0c9131636ddbd513b2be78ca26b3a24"
-
-                urlCoordinates = urlOne + "lat=" + latitude + "&lon=" + longitude + urlTwo
-
 
                 stringArray += latitude.toString()
                 stringArray += longitude.toString()
