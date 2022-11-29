@@ -4,38 +4,33 @@ package com.example.weather_app
 
 import android.content.ContentValues.TAG
 import android.content.Context
-import android.content.res.Resources
-import android.graphics.drawable.Drawable
 import android.location.Address
 import android.location.Geocoder
 import android.location.LocationManager
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
-import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import androidx.room.Room
 import com.example.weather_app.database.AppDatabase
+import com.example.weather_app.database.CityModel
 import com.example.weather_app.info.City
 import com.example.weather_app.location.LocationMngr
 import com.example.weather_app.permission.PermissionManager
-import com.example.weather_app.retrofit.ApiInterface
-import com.example.weather_app.retrofit.ObjectMaker
+import com.example.weather_app.recyclerview.CityAdapter
 import com.example.weather_app.retrofit.RetrofitManager
 import com.google.android.gms.common.api.Status
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
-import com.google.gson.Gson
-import org.json.JSONObject
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 
 class MainActivity : AppCompatActivity() {
@@ -45,9 +40,16 @@ class MainActivity : AppCompatActivity() {
 
         val db = Room.databaseBuilder(
             applicationContext,
-            AppDatabase::class.java, "CityModel"
-        ).allowMainThreadQueries().build()
+            AppDatabase::class.java, "city"
+        ).allowMainThreadQueries()
+            .fallbackToDestructiveMigration().build()
 
+        var cities = db.cityDao().getAll()
+        var recView:RecyclerView = findViewById(R.id.recView)
+
+        var adapter = CityAdapter(cities as ArrayList<CityModel>)
+        recView.adapter = adapter
+        recView.layoutManager = LinearLayoutManager(this)
 
         Places.initialize(applicationContext, "AIzaSyDcohma722quXf3lca57RsWk3OSj69Abns")
 
@@ -88,7 +90,9 @@ class MainActivity : AppCompatActivity() {
 
         var button: Button = findViewById(R.id.button)
 
-
+        var refresh:Button = findViewById(R.id.button2)
+        refresh.setOnClickListener(){
+        }
 
 
         autocompleteFragment.setOnPlaceSelectedListener(object : PlaceSelectionListener {
@@ -108,8 +112,13 @@ class MainActivity : AppCompatActivity() {
                     ).show()
                     autocompleteFragment.setText("Enter a place")
                 }
+                val userDao = db.cityDao()
+                city = RetrofitManager().getCity(tempName!!, cityText, currentTemperatureText, descriptionText, userDao, adapter)
 
-                city = RetrofitManager().getCity(tempName!!, cityText, currentTemperatureText, descriptionText, applicationContext)
+
+
+
+
 
             }
 
@@ -123,7 +132,7 @@ class MainActivity : AppCompatActivity() {
             PermissionManager.checkLocationPermission(this)
             var listOfParams = LocationMngr.getCurrentLocation(locationManager)
 
-            city = RetrofitManager().getCityWithCo(listOfParams.get(0),listOfParams.get(1), cityText, currentTemperatureText, descriptionText)
+            city = RetrofitManager().getCityWithCo(listOfParams.get(0),listOfParams.get(1), cityText, currentTemperatureText, descriptionText, adapter)
         }
 
 
