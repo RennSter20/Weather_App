@@ -13,7 +13,6 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.room.Room
@@ -29,8 +28,6 @@ import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 
 class MainActivity : AppCompatActivity() {
@@ -38,21 +35,25 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val db = Room.databaseBuilder(
+        val cityDB = Room.databaseBuilder(
             applicationContext,
             AppDatabase::class.java, "city"
         ).allowMainThreadQueries()
             .fallbackToDestructiveMigration().build()
 
-        var cities = db.cityDao().getAll()
+        var cities = cityDB.cityDao().getAll()
         var recView:RecyclerView = findViewById(R.id.recView)
+
+
 
         var adapter = CityAdapter(cities as ArrayList<CityModel>)
         recView.adapter = adapter
         recView.layoutManager = LinearLayoutManager(this)
 
-        Places.initialize(applicationContext, "AIzaSyDcohma722quXf3lca57RsWk3OSj69Abns")
 
+
+
+        Places.initialize(applicationContext, "AIzaSyDcohma722quXf3lca57RsWk3OSj69Abns")
         val autocompleteFragment =
             supportFragmentManager.findFragmentById(R.id.autocomplete_fragment)
                     as AutocompleteSupportFragment
@@ -61,37 +62,25 @@ class MainActivity : AppCompatActivity() {
         //list of adress that google API returns when user searches
         var addressList:MutableList<Address>?
 
-        //main city object
-        var city:City? = null
+        var lastUpdatedText:TextView = findViewById(R.id.lastUpdatedText)
+        var dateInfo: List<String> = cityDB.cityDao().getAll().get(0).lastUpdated!!.split(" ")
+        lastUpdatedText.text = dateInfo[0] + " " + dateInfo[1] + " " + dateInfo[2] + " " + dateInfo[3]
+
 
         var cityText:TextView = findViewById(R.id.cityText)
         var currentTemperatureText:TextView = findViewById(R.id.currentTemperature)
         var descriptionText:TextView = findViewById(R.id.weatherDescription)
 
-        var urlOne = "https://api.openweathermap.org/data/2.5/"
-        var urlTwo = "&units=metric&lang=en&appid=e823ed3a89e6e68ab2ff121613a7cf70"
-
         //TEMPORARY CITY OBJECT VALUES
-        var tempName:String? = null
-        var tempLon:String? = null
-        var tempLat:String? = null
-        var tempMainDesc:String
-        var tempDesc:String
-        var tempIcon:String? = null
-        var tempTemp:String? = null
-        var tempFeelsLike:Long
-        var tempMin:Long
-        var tempMax:Long
-        var tempWind:Long
-        var tempUrl:String? = null
-        //
+        var tempName:String?
 
         var locationManager: LocationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
         var button: Button = findViewById(R.id.button)
+        var refreshButton:Button = findViewById(R.id.refreshButton)
 
-        var refresh:Button = findViewById(R.id.button2)
-        refresh.setOnClickListener(){
+        refreshButton.setOnClickListener(){
+            RetrofitManager().syncAllCities(cityDB.cityDao(), adapter, lastUpdatedText)
         }
 
 
@@ -112,12 +101,8 @@ class MainActivity : AppCompatActivity() {
                     ).show()
                     autocompleteFragment.setText("Enter a place")
                 }
-                val userDao = db.cityDao()
-                city = RetrofitManager().getCity(tempName!!, cityText, currentTemperatureText, descriptionText, userDao, adapter)
-
-
-
-
+                val userDao = cityDB.cityDao()
+                RetrofitManager().getCity(tempName!!, cityText, currentTemperatureText, descriptionText, userDao, adapter, lastUpdatedText)
 
 
             }
@@ -132,7 +117,7 @@ class MainActivity : AppCompatActivity() {
             PermissionManager.checkLocationPermission(this)
             var listOfParams = LocationMngr.getCurrentLocation(locationManager)
 
-            city = RetrofitManager().getCityWithCo(listOfParams.get(0),listOfParams.get(1), cityText, currentTemperatureText, descriptionText, adapter)
+            RetrofitManager().getCityWithCo(listOfParams.get(0),listOfParams.get(1), cityText, currentTemperatureText, descriptionText,cityDB.cityDao(), adapter, lastUpdatedText)
         }
 
 

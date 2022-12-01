@@ -48,6 +48,10 @@ class CityAdapter(var cities: ArrayList<CityModel>) : RecyclerView.Adapter<CityA
         cities.add(city)
     }
 
+    fun deleteAll(){
+        cities.clear()
+    }
+
     fun updateAll(newCities: ArrayList<CityModel>){
         cities.clear()
         cities.addAll(newCities)

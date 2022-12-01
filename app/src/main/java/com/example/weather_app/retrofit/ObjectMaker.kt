@@ -1,7 +1,10 @@
 package com.example.weather_app.retrofit
 
+import com.example.weather_app.database.CityModel
 import com.example.weather_app.info.City
 import org.json.JSONObject
+import java.util.*
+import kotlin.random.Random
 
 class ObjectMaker {
 
@@ -18,6 +21,14 @@ class ObjectMaker {
             jsonObject.getJSONObject("main").getString("temp_min"),
             jsonObject.getJSONObject("main").getString("temp_max")
         )
+        return city
+    }
+
+    fun makeSyncObject(jsonObject: JSONObject) :CityModel{
+        var city = CityModel(
+            Random(System.currentTimeMillis()).nextInt(),
+            jsonObject.getString("name"),
+            jsonObject.getJSONObject("main").getString("temp"), Date().toString())
         return city
     }
 

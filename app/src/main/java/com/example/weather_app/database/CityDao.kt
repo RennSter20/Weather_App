@@ -20,4 +20,9 @@ interface CityDao {
 
     @Delete
     fun delete(user: CityModel)
+
+    @Query("DELETE FROM city")
+    fun deleteAll()
+
+
 }

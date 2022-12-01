@@ -1,16 +1,10 @@
 package com.example.weather_app.retrofit
 
-import android.R
-import android.app.Activity
 import android.content.Context
 import android.content.res.Resources
 import android.graphics.drawable.Drawable
-import android.os.SystemClock
 import android.util.Log
-import android.view.View
-import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
 import com.example.weather_app.database.CityDao
 import com.example.weather_app.database.CityModel
 import com.example.weather_app.info.City
@@ -22,6 +16,9 @@ import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.text.SimpleDateFormat
+import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.random.Random
 
 
@@ -44,7 +41,17 @@ class RetrofitManager {
         //image.setImageDrawable(drawable)
     }
 
-    fun getCity(cityName:String,cityText:TextView, tempText:TextView, descriptionText:TextView, userDao: CityDao, adapter: CityAdapter): City? {
+    fun setLastUpdatedText(text:TextView){
+
+        text.text = SimpleDateFormat("HH:mm:ss").format(Date()).toString();
+
+    }
+
+    //Thu Dec 01 11:29:49 GMT+01:00 2022
+
+    fun getCity(
+        cityName:String,
+        cityText:TextView, tempText:TextView, descriptionText:TextView, userDao: CityDao, adapter: CityAdapter, text:TextView) {
 
         var apiInterface:ApiInterface = retrofit.create(ApiInterface::class.java)
         var call: Call<Object> = apiInterface.getWeatherData(cityName)
@@ -65,10 +72,48 @@ class RetrofitManager {
 
                 //DATABASE
                 var id: Int = Random(System.currentTimeMillis()).nextInt()
-                var cityModel = CityModel(id, cityToReturn?.cityName, cityToReturn?.temperature)
+                var cityModel = CityModel(id, cityToReturn?.cityName, cityToReturn?.temperature, Date().toString())
                 userDao.insertAll(cityModel)
-                adapter.cities = userDao.getAll() as ArrayList<CityModel>
+
+                adapter.addCity(cityModel)
+                adapter.notifyItemChanged(adapter.cities.indexOf(cityModel))
+
+                var dateInfo: List<String> = cityModel.lastUpdated!!.split(" ")
+
+                text.text = dateInfo[0] + " " + dateInfo[1] + " " + dateInfo[2] + " " + dateInfo[3]
+                //setIcon(cityToReturn!!, context)
+            }
+
+            override fun onFailure(call: Call<Object>?, t: Throwable?) {
+                //Toast.makeText(context, "No data recieved!", Toast.LENGTH_SHORT).show()
+            }})
+
+    }
+
+    fun getCitySync(city:CityModel, cityDao: CityDao, adapter: CityAdapter, text:TextView) {
+
+        var apiInterface:ApiInterface = retrofit.create(ApiInterface::class.java)
+        var call: Call<Object> = apiInterface.getWeatherData(city.cityName)
+        var cityToReturn = CityModel(null, null, null, null)
+
+        call?.enqueue(object : Callback<Object> {
+            override fun onResponse(call: Call<Object>?, response: Response<Object>) {
+                Log.i("TAG", Gson().toJson(response.body()))
+
+                val jsonObject = JSONObject(Gson().toJson(response.body()))
+                cityToReturn = ObjectMaker().makeSyncObject(jsonObject)
+
+                //DATABASE
+                var id: Int = Random(System.currentTimeMillis()).nextInt()
+                var cityModel = CityModel(id, cityToReturn?.cityName, cityToReturn?.temperature, Date().toString())
+                cityDao.insertAll(cityModel)
+
+                adapter.addCity(cityModel)
                 adapter.notifyDataSetChanged()
+
+                var dateInfo: List<String> = cityModel.lastUpdated!!.split(" ")
+
+                text.text = dateInfo[0] + " " + dateInfo[1] + " " + dateInfo[2] + " " + dateInfo[3]
 
                 //setIcon(cityToReturn!!, context)
             }
@@ -76,11 +121,9 @@ class RetrofitManager {
             override fun onFailure(call: Call<Object>?, t: Throwable?) {
                 //Toast.makeText(context, "No data recieved!", Toast.LENGTH_SHORT).show()
             }})
-        return cityToReturn
-
     }
 
-    fun getCityWithCo(lat: String, lon: String, cityText:TextView, tempText:TextView, descriptionText:TextView, adapter: CityAdapter): City? {
+    fun getCityWithCo(lat: String, lon: String, cityText:TextView, tempText:TextView, descriptionText:TextView, cityDao: CityDao, adapter: CityAdapter, text:TextView) {
         var apiInterface:ApiInterface = retrofit.create(ApiInterface::class.java)
         var call: Call<Object> = apiInterface.getWeatherDataWithCo(lat, lon)
 
@@ -98,14 +141,37 @@ class RetrofitManager {
                 tempText.text = cityToReturn!!.temperature
                 descriptionText.text = cityToReturn!!.cityMainDescription
 
+                var id: Int = Random(System.currentTimeMillis()).nextInt()
+                var cityModel = CityModel(id, cityToReturn?.cityName, cityToReturn?.temperature, Date().toString())
+                cityDao.insertAll(cityModel)
+
+                adapter.addCity(cityModel)
+                adapter.notifyItemChanged(adapter.cities.indexOf(cityModel))
+
+                var dateInfo: List<String> = cityModel.lastUpdated!!.split(" ")
+
+                text.text = dateInfo[0] + " " + dateInfo[1] + " " + dateInfo[2] + " " + dateInfo[3]
                 //setIcon(cityToReturn!!, context)
-                adapter.notifyDataSetChanged()
             }
 
             override fun onFailure(call: Call<Object>?, t: Throwable?) {
                 //Toast.makeText(context, "No data recieved!", Toast.LENGTH_SHORT).show()
             }})
-        return cityToReturn
+    }
+    fun syncAllCities(cityDao: CityDao, adapter: CityAdapter, text:TextView){
+
+        var citiesTemp = ArrayList<CityModel>()
+
+        for(city in adapter.cities){
+            citiesTemp.add(city)
+        }
+
+        adapter.deleteAll()
+        cityDao.deleteAll()
+
+        for(city in citiesTemp){
+            getCitySync(city, cityDao, adapter, text)
+        }
     }
 
 }
